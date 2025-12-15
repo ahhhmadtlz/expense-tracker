@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/auth"
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/entity"
@@ -25,11 +26,13 @@ type Repositroy interface {
 type Service struct {
 	repo Repositroy
 	auth AuthService
+	logger *slog.Logger
 }
 
-func New(authService AuthService,repo Repositroy)Service{
+func New(authService AuthService,repo Repositroy,logger *slog.Logger)Service{
 		return Service{
 			auth:authService,
 			repo:repo,
+			logger:logger,
 		}
 }

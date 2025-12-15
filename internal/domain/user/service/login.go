@@ -12,28 +12,56 @@ import (
 func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginResponse,error){
 	const op=richerror.Op("userservice.Login")
 
-	user,err:=s.repo.GetUserByPhoneNumber(ctx,req.PhoneNumber)
+	// Log login attempt
+	s.logger.Info("Login attempt",
+		"email", req.PhoneNumber,
+	)
 
+	user,err:=s.repo.GetUserByPhoneNumber(ctx,req.PhoneNumber)
 	if err!=nil{
+			s.logger.Warn("Login failed - user not found",
+			"phoneNumber", req.PhoneNumber,
+		)
 		return param.LoginResponse{},richerror.New(op).WithErr(err).WithMeta("phone_number",req.PhoneNumber)
 	}
 
 	err =bcrypt.CompareHashAndPassword([]byte(user.Password),[]byte(req.Password))
 
 	if err!=nil{
-		return param.LoginResponse{},richerror.New(op).WithErr(err).WithMessage("username or password is incorrect")
+			s.logger.Warn("Login failed - user or password is incorrect",
+				"user_id", user.ID,
+				"phoneNumber", user.PhoneNumber,
+			)
+		return param.LoginResponse{},richerror.New(op).
+			WithErr(err).
+			WithMessage("username or password is incorrect")
 	}
+
 	accessToken,err:=s.auth.CreateAccessToken(user)
 
 	if err!=nil{
+		s.logger.Error("Failed to create access token",
+			"user_id", user.ID,
+			"error", err.Error(),
+		)
 		return  param.LoginResponse{},richerror.New(op).WithErr(err)
 	}
 
 	refreshToken,err:=s.auth.CreateRefreshToken(user)
 
 	if err!=nil{
+		s.logger.Error("Failed to create refresh token",
+			"user_id", user.ID,
+			"error", err.Error(),
+		)
 		return  param.LoginResponse{},richerror.New(op).WithErr(err)
 	}
+
+	// Log successful login
+	s.logger.Info("User logged in successfully",
+		"user_id", user.ID,
+		"phoneNumber", user.PhoneNumber,
+	)
 	return param.LoginResponse{
 		User:param.UserInfo{
 			ID:user.ID,

@@ -13,9 +13,15 @@ import (
 func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.RegisterResponse,error){
 	const op=richerror.Op("userService.Register")
 
+	s.logger.Info("User registration attempt",
+		"phonenumber",req.PhoneNumber,
+		"name",req.Name,
+	)
+
 	hashedPassword,err:=bcrypt.GenerateFromPassword([]byte(req.Password),bcrypt.DefaultCost)
 
 	if err !=nil{
+		s.logger.Error("Failed to hash password","error",err.Error())
 		return param.RegisterResponse{},richerror.New(op).WithMessage("failed to hash password").WithKind(richerror.KindUnexpected).WithErr(err)
 	}
 
@@ -28,9 +34,18 @@ func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.
 
 	createdUser,err:=s.repo.RegisterUser(ctx,user)
 	if err!=nil{
+		s.logger.Error("Failed to create user",
+			"phoneNumber", req.PhoneNumber,
+			"error", err.Error(),
+		)
 		return  param.RegisterResponse{},richerror.New(op).WithMessage("failed to register user").WithKind(richerror.KindUnexpected).WithErr(err)
 	}
 
+	//  successful registration
+	s.logger.Info("User registered successfully",
+		"user_id", createdUser.ID,
+		"phoneNumber", createdUser.PhoneNumber,
+	)
 	return  param.RegisterResponse{
 		User:param.UserInfo{
 			ID:createdUser.ID,
