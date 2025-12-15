@@ -1,0 +1,25 @@
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "123"
+  db_name: expensetracker "
+
+auth:
+  sign_key: "your-secret-key-change-in-production"
+  access_expiration_time: 60      # in minutes (1 hour)
+  refresh_expiration_time: 10080  # in minutes (7 days)
+
+
+logger:
+  file_path: "logs/app.log"
+  use_local_time: false        # false = UTC, true = local time
+  file_max_size_mb: 100        # megabytes
+  file_max_age_days: 30        # days to keep
+  max_backups: 5               # number of old log files
+  compress: true               # compress rotated logs
+
+

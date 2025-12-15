@@ -10,3 +10,11 @@ const (
 	AuthMiddlewareContextKey   = "claims"
 	BcryptCost                 = 3
 )
+
+const (
+	LoggerUseLocalTime     = false
+	LoggerFileMaxSizeInMB  = 100
+	LoggerFileMaxAgeInDays = 30
+	LoggerMaxBackups       = 5
+	LoggerCompress         = true
+)
