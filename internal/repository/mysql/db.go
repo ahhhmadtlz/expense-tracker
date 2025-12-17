@@ -26,6 +26,19 @@ type MySQLDB struct {
 func (m MySQLDB) Conn() *sql.DB {
 	return m.db
 }
+func (m *MySQLDB) Close() error {
+	m.logger.Info("Closing MySQL database connection")
+	
+	if err := m.db.Close(); err != nil {
+		m.logger.Error("Failed to close MySQL database",
+			"error", err.Error(),
+		)
+		return err
+	}
+	
+	m.logger.Info("MySQL database connection closed successfully")
+	return nil
+}
 
 func New (config Config,logger *slog.Logger) *MySQLDB{
 	logger.Info("Connecting to MySQL database",
