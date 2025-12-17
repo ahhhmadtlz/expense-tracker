@@ -1,12 +1,13 @@
-server:
-  port: "8080"
+http_server:
+  port: 8080
 
-database:
-  host: "localhost"
-  port: "3306"
-  user: "root"
-  password: "123"
-  db_name: expensetracker "
+
+mysql:
+  username: root
+  password: 123
+  port: 3306
+  host: localhost
+  db_name: expensetracker 
 
 auth:
   sign_key: "your-secret-key-change-in-production"

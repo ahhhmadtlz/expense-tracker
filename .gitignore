@@ -1,6 +1,7 @@
 # Go binaries
 /bin/
 /pkg/
+/logs/
 
 # IDE files
 .vscode/
