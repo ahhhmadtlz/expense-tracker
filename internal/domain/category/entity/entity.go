@@ -1,4 +1,4 @@
-package category
+package entity
 
 import "time"
 
@@ -30,7 +30,6 @@ type Category struct {
 	UserID uint
 	Name string
 	Type CategoryType
-	Icon string
 	Color string
 	CreatedAt time.Time
 }
