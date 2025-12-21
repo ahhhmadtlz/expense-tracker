@@ -7,13 +7,14 @@ import (
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/entity"
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/param"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/pkg/richerror"
 )
 
 func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.RegisterResponse,error){
 	const op=richerror.Op("userService.Register")
 
-	s.logger.Info("User registration attempt",
+	logger.Info("User registration attempt",
 		"phonenumber",req.PhoneNumber,
 		"name",req.Name,
 	)
@@ -21,7 +22,7 @@ func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.
 	hashedPassword,err:=bcrypt.GenerateFromPassword([]byte(req.Password),bcrypt.DefaultCost)
 
 	if err !=nil{
-		s.logger.Error("Failed to hash password","error",err.Error())
+		logger.Error("Failed to hash password","error",err.Error())
 		return param.RegisterResponse{},richerror.New(op).WithMessage("failed to hash password").WithKind(richerror.KindUnexpected).WithErr(err)
 	}
 
@@ -34,7 +35,7 @@ func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.
 
 	createdUser,err:=s.repo.RegisterUser(ctx,user)
 	if err!=nil{
-		s.logger.Error("Failed to create user",
+		logger.Error("Failed to create user",
 			"phoneNumber", req.PhoneNumber,
 			"error", err.Error(),
 		)
@@ -42,7 +43,7 @@ func (s Service) Register(ctx context.Context, req param.RegisterRequest)(param.
 	}
 
 	//  successful registration
-	s.logger.Info("User registered successfully",
+	logger.Info("User registered successfully",
 		"user_id", createdUser.ID,
 		"phoneNumber", createdUser.PhoneNumber,
 	)

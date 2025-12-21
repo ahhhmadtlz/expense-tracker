@@ -2,13 +2,13 @@ package httpserver
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/config"
 	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/userhandler"
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/auth"
 	userservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/service"
 	uservalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/validator"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -16,7 +16,6 @@ import (
 type Server struct {
 	config          config.Config
 	userHandler     userhandler.Handler
-	logger *slog.Logger
 	Router          *echo.Echo
 }
 
@@ -26,14 +25,13 @@ func New(
 	auth auth.Service,
 	userSvc userservice.Service,
 	userValidator uservalidator.Validator,
-	logger        *slog.Logger,
+
 )Server{
 	return  Server{
 		Router: echo.New(),
 		config: config,
-		logger:      logger,
 		userHandler: userhandler.New(
-			auth,userSvc,userValidator,config.Auth,logger,
+			auth,userSvc,userValidator,config.Auth,
 		),
 	}
 }
@@ -56,7 +54,7 @@ func (s Server)Serve(){
 		LogProtocol:      true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			if v.Error == nil {
-				s.logger.Info("request",
+				logger.Info("request",
 					"request_id", v.RequestID,
 					"host", v.Host,
 					"content_length", v.ContentLength,
@@ -69,7 +67,7 @@ func (s Server)Serve(){
 					"status", v.Status,
 				)
 			} else {
-				s.logger.Error("request",
+				logger.Error("request",
 					"request_id", v.RequestID,
 					"host", v.Host,
 					"content_length", v.ContentLength,

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/param"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/pkg/richerror"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -13,13 +14,13 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 	const op=richerror.Op("userservice.Login")
 
 	// Log login attempt
-	s.logger.Info("Login attempt",
+	logger.Info("Login attempt",
 		"email", req.PhoneNumber,
 	)
 
 	user,err:=s.repo.GetUserByPhoneNumber(ctx,req.PhoneNumber)
 	if err!=nil{
-			s.logger.Warn("Login failed - user not found",
+			logger.Warn("Login failed - user not found",
 			"phoneNumber", req.PhoneNumber,
 		)
 		return param.LoginResponse{},richerror.New(op).WithErr(err).WithMeta("phone_number",req.PhoneNumber)
@@ -28,7 +29,7 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 	err =bcrypt.CompareHashAndPassword([]byte(user.Password),[]byte(req.Password))
 
 	if err!=nil{
-			s.logger.Warn("Login failed - user or password is incorrect",
+			logger.Warn("Login failed - user or password is incorrect",
 				"user_id", user.ID,
 				"phoneNumber", user.PhoneNumber,
 			)
@@ -40,7 +41,7 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 	accessToken,err:=s.auth.CreateAccessToken(user)
 
 	if err!=nil{
-		s.logger.Error("Failed to create access token",
+		logger.Error("Failed to create access token",
 			"user_id", user.ID,
 			"error", err.Error(),
 		)
@@ -50,7 +51,7 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 	refreshToken,err:=s.auth.CreateRefreshToken(user)
 
 	if err!=nil{
-		s.logger.Error("Failed to create refresh token",
+		logger.Error("Failed to create refresh token",
 			"user_id", user.ID,
 			"error", err.Error(),
 		)
@@ -58,7 +59,7 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 	}
 
 	// Log successful login
-	s.logger.Info("User logged in successfully",
+	logger.Info("User logged in successfully",
 		"user_id", user.ID,
 		"phoneNumber", user.PhoneNumber,
 	)

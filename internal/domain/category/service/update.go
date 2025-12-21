@@ -4,24 +4,25 @@ import (
 	"context"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/category/param"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/pkg/richerror"
 )
 
 func (s Service) UpdateCategory(ctx context.Context,req param.UpdateCategoryRequest,categoryID,userID uint)(param.UpdateCategoryResponse,error){
 	const op=richerror.Op("categoryservice.UpdateCategory")
 
-	s.logger.Info("Updating category","category_id",categoryID,"user_id",userID)
+	logger.Info("Updating category","category_id",categoryID,"user_id",userID)
 
 	existingCategory,err:=s.repo.GetByID(ctx,categoryID)
 
 	if err!=nil{
-		s.logger.Error("Failed to get category","category_id",categoryID,"error",err.Error())
+		logger.Error("Failed to get category","category_id",categoryID,"error",err.Error())
 
 		return param.UpdateCategoryResponse{},richerror.New(op).WithMessage("category not found").WithKind(richerror.KindNotFound).WithErr(err)
 	}
 
 	if existingCategory.UserID !=userID {
-		s.logger.Warn("Unauthorized category update attempt","category_id",categoryID,"category_owner",existingCategory.UserID,"requesting_user",userID)
+		logger.Warn("Unauthorized category update attempt","category_id",categoryID,"category_owner",existingCategory.UserID,"requesting_user",userID)
 
 		return param.UpdateCategoryResponse{},richerror.New(op).WithMessage("unauthorized").WithKind(richerror.KindForbidden)
 	}
@@ -36,11 +37,11 @@ func (s Service) UpdateCategory(ctx context.Context,req param.UpdateCategoryRequ
 	updatedCategory,err:=s.repo.update(ctx,existingCategory)
 	
 	if err!=nil {
-		s.logger.Error("Failed to update category","category_id",categoryID,"error",err.Error())
+		logger.Error("Failed to update category","category_id",categoryID,"error",err.Error())
 		return  param.UpdateCategoryResponse{},richerror.New(op).WithMessage("failed to udpate category").WithKind(richerror.KindUnexpected).WithErr(err)
 	}
 
-	s.logger.Info("Category updated successfully","category_id",categoryID,"user_id",userID)
+	logger.Info("Category updated successfully","category_id",categoryID,"user_id",userID)
 
 	return param.UpdateCategoryResponse{
 		Category: param.ToCategoryInfo(updatedCategory),

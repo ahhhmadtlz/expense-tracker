@@ -50,6 +50,11 @@ func L()*slog.Logger{
 	return l
 }
 
+func SetDefault(logger *slog.Logger) {
+	l = logger
+}
+
+
 // New is constructor logger with special settings.
 func New(cfg Config,opt *slog.HandlerOptions)*slog.Logger {
 	fileWriter:=&lumberjack.Logger{
@@ -65,4 +70,21 @@ func New(cfg Config,opt *slog.HandlerOptions)*slog.Logger {
 		slog.NewJSONHandler(io.MultiWriter(fileWriter,os.Stdout),opt),
 	)
 	return logger
+}
+
+
+func Debug(msg string, args ...any) {
+	l.Debug(msg, args...)
+}
+
+func Info(msg string, args ...any) {
+	l.Info(msg, args...)
+}
+
+func Warn(msg string, args ...any) {
+	l.Warn(msg, args...)
+}
+
+func Error(msg string, args ...any) {
+	l.Error(msg, args...)
 }

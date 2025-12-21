@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/param"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/pkg/richerror"
 )
 
@@ -11,13 +12,13 @@ func (s Service) RefreshAccessToken(ctx context.Context, req param.RefreshAccess
 	const op=richerror.Op("userService.RefreshAccessToken")
 
 	// Log refresh attempt
-	s.logger.Info("Refresh token request received")
+	logger.Info("Refresh token request received")
 
 	claims,err:=s.auth.ParseRefreshToken(req.RefreshToken)
 
 
 	if err != nil {
-		s.logger.Warn("Invalid refresh token attempt",
+		logger.Warn("Invalid refresh token attempt",
 			"error", err.Error(),
 		)
     return param.RefreshAccessTokenResponse{}, richerror.New(op).
@@ -29,7 +30,7 @@ func (s Service) RefreshAccessToken(ctx context.Context, req param.RefreshAccess
 	user,err:=s.repo.GetUserByID(ctx,claims.UserID)
 
 	if err!=nil{
-		s.logger.Error("Failed to retrieve user",
+		logger.Error("Failed to retrieve user",
 			"user_id", claims.UserID,
 			"error", err.Error(),
 		)
@@ -41,7 +42,7 @@ func (s Service) RefreshAccessToken(ctx context.Context, req param.RefreshAccess
 
 	accessToken,err:=s.auth.CreateAccessToken(user)
 	if err !=nil {
-		s.logger.Error("Failed to create access token",
+		logger.Error("Failed to create access token",
 			"user_id", user.ID,
 			"error", err.Error(),
 		)
@@ -52,7 +53,7 @@ func (s Service) RefreshAccessToken(ctx context.Context, req param.RefreshAccess
 	}
 
 	// Log successful token refresh
-	s.logger.Info("Access token refreshed successfully",
+	logger.Info("Access token refreshed successfully",
 		"user_id", user.ID,
 	)
 	

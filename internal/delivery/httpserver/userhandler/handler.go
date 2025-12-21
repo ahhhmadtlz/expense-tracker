@@ -1,7 +1,6 @@
 package userhandler
 
 import (
-	"log/slog"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/auth"
 	userservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/service"
@@ -13,7 +12,6 @@ type Handler struct {
 	userSvc       userservice.Service
 	userValidator uservalidator.Validator
 	authConfig    auth.Config
-	logger        *slog.Logger  
 }
 
 func New(
@@ -21,13 +19,13 @@ func New(
 	userSvc userservice.Service,
 	userValidator uservalidator.Validator,
 	authConfig auth.Config,
-	logger *slog.Logger,  
+ 
 ) Handler {
 	return Handler{
 		authSvc:       authSvc,
 		userSvc:       userSvc,
 		userValidator: userValidator,
 		authConfig:    authConfig,
-		logger:        logger,  
+		 
 	}
 }
