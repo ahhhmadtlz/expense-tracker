@@ -2,8 +2,9 @@ package userhandler
 
 import (
 	"net/http"
-	
+
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/user/param"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/pkg/httpmsgerrorhandler"
 	"github.com/labstack/echo/v4"
 )
@@ -11,19 +12,19 @@ import (
 func (h Handler) userRegister(c echo.Context) error {
 	var req param.RegisterRequest
 	
-	h.logger.Info("Register request received")
+	logger.Info("Register request received")
 	
 	if err := c.Bind(&req); err != nil {
-		h.logger.Warn("Failed to bind request", "error", err.Error())
+		logger.Warn("Failed to bind request", "error", err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"message": "invalid request body",
 		})
 	}
 	
-	h.logger.Debug("Request bound successfully", "phone_number", req.PhoneNumber)
+	logger.Debug("Request bound successfully", "phone_number", req.PhoneNumber)
 	
 	if fieldErrors, err := h.userValidator.ValidateRegisterRequest(c.Request().Context(), req); err != nil {
-		h.logger.Warn("Validation failed",
+		logger.Warn("Validation failed",
 			"phone_number", req.PhoneNumber,
 			"field_errors", fieldErrors,
 		)
@@ -34,11 +35,11 @@ func (h Handler) userRegister(c echo.Context) error {
 		})
 	}
 	
-	h.logger.Debug("Validation passed, calling service", "phone_number", req.PhoneNumber)
+	logger.Debug("Validation passed, calling service", "phone_number", req.PhoneNumber)
 	
 	resp, err := h.userSvc.Register(c.Request().Context(), req)
 	if err != nil {
-		h.logger.Error("Registration failed",
+		logger.Error("Registration failed",
 			"phone_number", req.PhoneNumber,
 			"error", err.Error(),
 		)
@@ -48,7 +49,7 @@ func (h Handler) userRegister(c echo.Context) error {
 		})
 	}
 	
-	h.logger.Info("User registered successfully", "phone_number", req.PhoneNumber)
+	logger.Info("User registered successfully", "phone_number", req.PhoneNumber)
 	
 	return c.JSON(http.StatusCreated, echo.Map{
 		"message": "user registered successfully",

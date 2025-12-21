@@ -3,10 +3,10 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 )
 
 type Config struct {
@@ -19,28 +19,28 @@ type Config struct {
 
 type MySQLDB struct {
 	config Config
-	db *sql.DB
-	logger *slog.Logger
+	db     *sql.DB
 }
 
 func (m MySQLDB) Conn() *sql.DB {
 	return m.db
 }
+
 func (m *MySQLDB) Close() error {
-	m.logger.Info("Closing MySQL database connection")
-	
+	logger.Info("Closing MySQL database connection")
+
 	if err := m.db.Close(); err != nil {
-		m.logger.Error("Failed to close MySQL database",
+		logger.Error("Failed to close MySQL database",
 			"error", err.Error(),
 		)
 		return err
 	}
-	
-	m.logger.Info("MySQL database connection closed successfully")
+
+	logger.Info("MySQL database connection closed successfully")
 	return nil
 }
 
-func New (config Config,logger *slog.Logger) *MySQLDB{
+func New(config Config) *MySQLDB {
 	logger.Info("Connecting to MySQL database",
 		"host", config.Host,
 		"port", config.Port,
@@ -49,17 +49,16 @@ func New (config Config,logger *slog.Logger) *MySQLDB{
 	)
 
 	dsn := fmt.Sprintf("%s:%s@(%s:%d)/%s?parseTime=true",
-	config.Username,config.Password,config.Host,config.Port,config.DBName)
+		config.Username, config.Password, config.Host, config.Port, config.DBName)
 
-	db,err:=sql.Open("mysql",dsn)
-
-	if err!=nil{
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
 		logger.Error("Failed to open MySQL database",
 			"error", err.Error(),
 			"host", config.Host,
 			"port", config.Port,
 		)
-		panic(fmt.Errorf("can't open mysql db:%v",err))
+		panic(fmt.Errorf("can't open mysql db:%v", err))
 	}
 
 	if err := db.Ping(); err != nil {
@@ -71,7 +70,7 @@ func New (config Config,logger *slog.Logger) *MySQLDB{
 		panic(fmt.Errorf("can't connect to mysql db: %v", err))
 	}
 
-	db.SetConnMaxLifetime(time.Minute*3)
+	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
 
@@ -83,8 +82,6 @@ func New (config Config,logger *slog.Logger) *MySQLDB{
 		"max_idle_conns", 10,
 		"conn_max_lifetime", "3m",
 	)
-	
 
-	return &MySQLDB{config:config,db:db,logger:logger}
-
+	return &MySQLDB{config: config, db: db}
 }

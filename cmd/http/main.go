@@ -31,7 +31,9 @@ cfg := config.C()
 		log.Fatalf("❌ Failed to create logs directory: %v", err)
 	}
 
-	mysqlDB := mysql.New(cfg.Mysql, appLogger)
+	logger.SetDefault(appLogger)
+
+	mysqlDB := mysql.New(cfg.Mysql)
 	log.Println("✓ Database connected")
 
  if err := runMigrations(mysqlDB, cfg); err != nil {
@@ -40,9 +42,9 @@ cfg := config.C()
 
 	appLogger.Info("Application starting", "port", cfg.HTTPServer.Port)
 
-	authSvc, userSvc, userValidator := setupServices(cfg, mysqlDB, appLogger)
+	authSvc, userSvc, userValidator := setupServices(cfg, mysqlDB)
 
-	server := httpserver.New(cfg, authSvc, userSvc, userValidator, appLogger)
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator )
 
 	go func() {
 		appLogger.Info("Server starting", "port", cfg.HTTPServer.Port)
@@ -80,7 +82,6 @@ func runMigrations(mysqlDB *mysql.MySQLDB, cfg config.Config) error {
 func setupServices(
 	cfg config.Config,
 	mysqlDB *mysql.MySQLDB,
-	logger *slog.Logger,
 ) (
 	auth.Service,
 	userservice.Service,
@@ -89,9 +90,9 @@ func setupServices(
 	// Auth service
 	authSvc := auth.New(cfg.Auth)
 
-	userRepo := userrepository.New(mysqlDB, logger)
+	userRepo := userrepository.New(mysqlDB)
 	userValidator := uservalidator.New(userRepo)
-	userSvc := userservice.New(authSvc, userRepo, logger) 
+	userSvc := userservice.New(authSvc, userRepo) 
 
 	return authSvc, userSvc, userValidator
 }
