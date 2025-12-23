@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/category/entity"
 )
 
@@ -10,7 +11,7 @@ type Repository interface {
 	GetByID(ctx context.Context,categoryID uint)(entity.Category,error)
 	GetByUserID(ctx context.Context,userID uint)([]entity.Category,error)
 	GetByUserIDAndType(ctx context.Context,userID uint ,catType entity.CategoryType)([]entity.Category,error)
-	update(ctx context.Context,category entity.Category)(entity.Category,error)
+	Update(ctx context.Context,category entity.Category)(entity.Category,error)
 	Delete(ctx context.Context,categoryID uint)error
 	CategoryHasTransactions(ctx context.Context,categoryID uint)(bool,error)
 }

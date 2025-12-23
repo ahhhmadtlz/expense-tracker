@@ -34,7 +34,7 @@ func (s Service) UpdateCategory(ctx context.Context,req param.UpdateCategoryRequ
 			existingCategory.Color = *req.Color
 	}
 
-	updatedCategory,err:=s.repo.update(ctx,existingCategory)
+	updatedCategory,err:=s.repo.Update(ctx,existingCategory)
 	
 	if err!=nil {
 		logger.Error("Failed to update category","category_id",categoryID,"error",err.Error())
