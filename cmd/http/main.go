@@ -12,6 +12,9 @@ import (
 	userrepository "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/repository"
 	userservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/service"
 	uservalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/validator"
+	categoryrepository "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/repository"
+	categoryservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/service"
+	categoryvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/validator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/repository/migrator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/repository/mysql"
@@ -42,9 +45,9 @@ cfg := config.C()
 
 	appLogger.Info("Application starting", "port", cfg.HTTPServer.Port)
 
-	authSvc, userSvc, userValidator := setupServices(cfg, mysqlDB)
+	authSvc, userSvc, userValidator,categorySvc, categoryValidator := setupServices(cfg, mysqlDB)
 
-	server := httpserver.New(cfg, authSvc, userSvc, userValidator )
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator ,categorySvc, categoryValidator)
 
 	go func() {
 		appLogger.Info("Server starting", "port", cfg.HTTPServer.Port)
@@ -86,6 +89,8 @@ func setupServices(
 	auth.Service,
 	userservice.Service,
 	uservalidator.Validator,
+	categoryservice.Service,
+	categoryvalidator.Validator,
 ) {
 	// Auth service
 	authSvc := auth.New(cfg.Auth)
@@ -94,5 +99,10 @@ func setupServices(
 	userValidator := uservalidator.New(userRepo)
 	userSvc := userservice.New(authSvc, userRepo) 
 
-	return authSvc, userSvc, userValidator
+	categoryRepo:=categoryrepository.New(mysqlDB)
+	categoryValidator := categoryvalidator.New(categoryRepo)
+	categorySvc := categoryservice.New(categoryRepo)
+
+
+	return authSvc, userSvc, userValidator, categorySvc, categoryValidator
 }

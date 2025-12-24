@@ -4,10 +4,14 @@ import (
 	"fmt"
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/config"
+	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/categoryhandler"
 	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/userhandler"
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/auth"
 	userservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/service"
 	uservalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/validator"
+
+	categoryservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/service"
+	categoryvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/validator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -16,6 +20,7 @@ import (
 type Server struct {
 	config          config.Config
 	userHandler     userhandler.Handler
+	categoryHandler categoryhandler.Handler
 	Router          *echo.Echo
 }
 
@@ -25,7 +30,8 @@ func New(
 	auth auth.Service,
 	userSvc userservice.Service,
 	userValidator uservalidator.Validator,
-
+	categorySvc categoryservice.Service,
+	categoryValidator categoryvalidator.Validator,
 )Server{
 	return  Server{
 		Router: echo.New(),
@@ -33,6 +39,7 @@ func New(
 		userHandler: userhandler.New(
 			auth,userSvc,userValidator,config.Auth,
 		),
+		categoryHandler: categoryhandler.New(config.Auth,auth,categorySvc,categoryValidator),
 	}
 }
 
@@ -91,6 +98,7 @@ func (s Server)Serve(){
 
 
 	s.userHandler.SetRoutes(s.Router)
+	s.categoryHandler.SetRoutes(s.Router)
 
 
 		// Start server
