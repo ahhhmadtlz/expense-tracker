@@ -15,7 +15,7 @@ func (s Service)Login(ctx context.Context ,req param.LoginRequest)(param.LoginRe
 
 	// Log login attempt
 	logger.Info("Login attempt",
-		"email", req.PhoneNumber,
+		"phone_numbeer", req.PhoneNumber,
 	)
 
 	user,err:=s.repo.GetUserByPhoneNumber(ctx,req.PhoneNumber)
