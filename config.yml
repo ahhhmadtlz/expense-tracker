@@ -11,8 +11,7 @@ mysql:
 
 auth:
   sign_key: "your-secret-key-change-in-production"
-  access_expiration_time: 60      # in minutes (1 hour)
-  refresh_expiration_time: 10080  # in minutes (7 days)
+
 
 
 logger:
