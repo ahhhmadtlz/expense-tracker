@@ -13,7 +13,7 @@ func Auth(service auth.Service, config auth.Config)echo.MiddlewareFunc {
 		SigningKey: []byte(config.SignKey),
 		SigningMethod: "HS256",
 		ParseTokenFunc: func(c echo.Context,auth string)(any,error){
-			claims,err:=service.ParseToken(auth)
+			claims,err:=service.ParseBearerToken(auth)
 			if err!=nil{
 				return nil,err
 			}
