@@ -8,6 +8,7 @@ import (
 
 type Repository interface {
 	GetByID(ctx context.Context, categoryID uint) (entity.Category,error)
+GetByUserIDAndName(ctx context.Context, userID uint, name string) (entity.Category, error)
 }
 
 

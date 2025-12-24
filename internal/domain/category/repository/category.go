@@ -41,7 +41,7 @@ func (d *DB) Create(ctx context.Context,category entity.Category)(entity.Categor
 func (d *DB)GetByID(ctx context.Context,categoryID uint)(entity.Category,error){
 	const op=richerror.Op("mysqlcategory.GetByID")
 
-	query:=`SELECT id ,user_id, name,color,created_at FROM categories WHERE id = ?`
+query := `SELECT id, user_id, name, type, color, created_at FROM categories WHERE id = ?`
 
 	row :=d.conn.Conn().QueryRowContext(ctx,query,categoryID)
 
@@ -107,6 +107,29 @@ func (d *DB) GetByUserIDAndType(ctx context.Context,userID uint,catType entity.C
 
 }
 
+
+func ( d *DB)GetByUserIDAndName(ctx context.Context,userID uint,name string)(entity.Category,error){
+	const op=richerror.Op("mysqlCategory.GetByUserIDAndName")
+
+	logger.Debug("Checking if category name exists for user", "user_id",userID,name,"name")
+
+	query:=`SELECT id, user_id, name , type, color, created_at FROM categories WHERE user_id= ? AND name= ?`
+
+	row:=d.conn.Conn().QueryRowContext(ctx,query,userID,name)
+
+	category,err:=scanCategory(row)
+
+	if err!=nil{
+		if err==sql.ErrNoRows{
+			return entity.Category{},richerror.New(op).WithErr(err).WithMessage("category not foudn").WithKind(richerror.KindNotFound)
+		}
+		logger.Error("Failed to check category name","user_id",userID,"name",name)
+		return entity.Category{},richerror.New(op).WithErr(err).WithMessage("failed to check").WithKind(richerror.KindUnexpected)
+	}
+
+	return category,nil
+
+}
 
 func (d *DB)GetByUserID(ctx context.Context , userID uint)([]entity.Category,error){
 	const op=richerror.Op("mysqlcategory.GetByUserID")

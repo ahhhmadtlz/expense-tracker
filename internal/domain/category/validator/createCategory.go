@@ -10,7 +10,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
-func (v Validator) ValidateCreateCategory(ctx context.Context, req param.CreateCategoryRequest)(map[string]string,error) {
+func (v Validator) ValidateCreateCategory(ctx context.Context, req param.CreateCategoryRequest,userID uint)(map[string]string,error) {
 	const op="categoryvalidator.ValidateCreateCategory"
 
 	req.Name = strings.TrimSpace(req.Name)
@@ -34,6 +34,23 @@ func (v Validator) ValidateCreateCategory(ctx context.Context, req param.CreateC
 				if value!=nil{
 					fieldErrors[key]=value.Error()
 				}
+			}
+		}
+	}
+
+_, err = v.repo.GetByUserIDAndName(ctx, userID, req.Name)
+	if err == nil {
+		// Category found - this is a duplicate!
+		fieldErrors["name"] = "category name already exists"
+	} else {
+		// Check if it's a "not found" error (which is good)
+		if rErr, ok := err.(*richerror.RichError); ok {
+			if rErr.GetKind() != richerror.KindNotFound {
+				// Some other error occurred
+				return nil, richerror.New(op).
+					WithErr(err).
+					WithMessage("failed to check category name").
+					WithKind(richerror.KindUnexpected)
 			}
 		}
 	}

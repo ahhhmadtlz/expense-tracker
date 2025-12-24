@@ -24,7 +24,7 @@ func (h Handler) createCategory(c echo.Context) error {
 
 	userID:=c.Get("user_id").(uint)
 
-	if fieldErrors,err:=h.categoryValidator.ValidateCreateCategory(c.Request().Context(),req);err!=nil{
+	if fieldErrors,err:=h.categoryValidator.ValidateCreateCategory(c.Request().Context(),req,userID);err!=nil{
 		logger.Warn("Validation failed",
 	 "user_id",userID,
 	 "field_erros",fieldErrors,
