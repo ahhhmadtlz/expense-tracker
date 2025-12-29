@@ -11,113 +11,122 @@ import (
 	"github.com/ahhhmadtlz/expense-tracker/internal/repository/mysql"
 )
 
-func (d *DB) Create(ctx context.Context, tx entity.Transaction)(entity.Transaction,error){
-	const op=richerror.Op("mysqltransaction.Create")
+func (d *DB) Create(ctx context.Context, tx entity.Transaction) (entity.Transaction, error) {
+	const op = richerror.Op("mysqlentity.Create")
 
-	logger.Info("Creating transaction in database","user_id",tx.UserID,"type",tx.Type.String())
+	logger.Info("Creating transaction in database", "user_id", tx.UserID, "type", tx.Type.String())
 
-	query:=`INSERT INTO transactions (user_id, category_id, type, amount,description, date) VALUES(?,?,?,?,?,?)`
+	query := `INSERT INTO transactions (user_id, category_id, type, amount, description, date) VALUES(?, ?, ?, ?, ?, ?)`
 
-	res,err:=d.conn.Conn().ExecContext(ctx,query,tx.UserID,tx.CategoryID,tx.Type.String(),tx.Amount,tx.Description,tx.Date)
+	res, err := d.conn.Conn().ExecContext(ctx, query, tx.UserID, tx.CategoryID, tx.Type.String(), tx.Amount, tx.Description, tx.Date)
 
-
-	if err !=nil{
-		logger.Error("Failed to create transaction","user_id",tx.UserID,"error",err.Error())
-		return entity.Transaction{},richerror.New(op).WithErr(err).WithMessage("failed to create transaction").WithKind(richerror.KindUnexpected)
+	if err != nil {
+		logger.Error("Failed to create transaction", "user_id", tx.UserID, "error", err.Error())
+		return entity.Transaction{}, richerror.New(op).WithErr(err).WithMessage("failed to create transaction").WithKind(richerror.KindUnexpected)
 	}
 
-	id ,err:=res.LastInsertId()
-
-	if err!=nil{
-		logger.Error("Failed to get inserted id","error",err.Error())
-		return entity.Transaction{},richerror.New(op).WithErr(err).WithMessage("failed to get inserted id").WithKind(richerror.KindUnexpected)
+	id, err := res.LastInsertId()
+	if err != nil {
+		logger.Error("Failed to get inserted id", "error", err.Error())
+		return entity.Transaction{}, richerror.New(op).WithErr(err).WithMessage("failed to get inserted id").WithKind(richerror.KindUnexpected)
 	}
+
 	tx.ID = uint(id)
-	logger.Info("Transaction created successfully", "transaction_id", tx.ID)
+	
+	// Fetch the complete record to get created_at and updated_at timestamps
+	createdTx, err := d.GetByID(ctx, tx.ID)
+	if err != nil {
+		logger.Error("Failed to fetch created transaction", "transaction_id", tx.ID, "error", err.Error())
+		// Return the transaction with ID even if fetch fails
+		return tx, nil
+	}
+
+	logger.Info("Transaction created successfully", "transaction_id", createdTx.ID)
+	return createdTx, nil
+}
+
+func (d *DB) GetByID(ctx context.Context, transactionID uint) (entity.Transaction, error) {
+	const op = richerror.Op("mysqlentity.GetByID")
+
+	query := `SELECT id, user_id, category_id, type, amount, description, date, created_at, updated_at FROM transactions WHERE id = ?`
+
+	row := d.conn.Conn().QueryRowContext(ctx, query, transactionID)
+
+	tx, err := scanTransaction(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logger.Debug("Transaction not found", "transaction_id", transactionID)
+			return entity.Transaction{}, richerror.New(op).
+				WithErr(err).
+				WithMessage("transaction not found").
+				WithKind(richerror.KindNotFound)
+		}
+		logger.Error("Failed to get transaction by ID", "transaction_id", transactionID, "error", err.Error())
+		return entity.Transaction{}, richerror.New(op).WithErr(err).WithMessage("failed to get transaction").WithKind(richerror.KindUnexpected)
+	}
 	return tx, nil
 }
 
-func (d *DB)GetByID(ctx context.Context,transactionID uint)(entity.Transaction,error){
-	const op=richerror.Op("mysqltransaction.GetByID")
+func (d *DB) GetByUserID(ctx context.Context, userID uint, filters map[string]interface{}) ([]entity.Transaction, error) {
+	const op = richerror.Op("mysqlentity.GetByUserID")
 
-	query:=`SELECT id ,user_id,category_id, type, amount,description,date,created_at,updated_at FROM transaction WHERE id = ?`
+	logger.Debug("Getting transactions for user", "user_id", userID)
 
-	row :=d.conn.Conn().QueryRowContext(ctx,query,transactionID)
+	query := `SELECT id, user_id, category_id, type, amount, description, date, created_at, updated_at FROM transactions WHERE user_id = ?`
+	args := []interface{}{userID}
 
-	tx,err:=scanTransaction(row)
-
-	if err!=nil{
-		if err ==sql.ErrNoRows{
-			logger.Debug("Transaction not found","transaction_id",transactionID)
-			return  entity.Transaction{},richerror.New(op).WithErr(err).WithMessage("transaction not found").WithKind(richerror.KindNotFound)
-		}
-		logger.Error("Failed to get transaction by ID","tranaction_id",transactionID,"error",err.Error())
-
-		return  entity.Transaction{},richerror.New(op).WithErr(err).WithMessage("failed to get transaction").WithKind(richerror.KindUnexpected)
+	// Apply filters
+	if txType, ok := filters["type"].(string); ok && txType != "" {
+		query += ` AND type = ?`
+		args = append(args, txType)
 	}
 
-	return  tx,nil
-}
-
-func (d *DB) GetByUserID(ctx context.Context , userID uint, filters map[string]any)([]entity.Transaction,error){
-	const op=richerror.Op("mysqltransaction.GetByUserID")
-	logger.Debug("Getting transactions for user","user_id",userID)
-
-	query:=`SELECT id ,user_id,category_id,type,amount,description,date,created_at,updated_at FROM transactions WHERE user_id = ?`
-
-	args:=[]any{userID}
-
-	if txType,ok:=filters["type"].(string);ok&&txType!=""{
-		query +=`AND type= ?`
-		args=append(args, txType)
+	if categoryID, ok := filters["category_id"].(uint); ok && categoryID > 0 {
+		query += ` AND category_id = ?`
+		args = append(args, categoryID)
 	}
 
-	if categoryID,ok:=filters["category_id"].(uint);ok&&categoryID>0{
-		query +=`AND category_id= ?`
-		args=append(args, categoryID)
-	}
-	if startDate,ok:=filters["start_date"].(time.Time);ok&&!startDate.IsZero(){
-		query+=`AND date >=?`
+	if startDate, ok := filters["start_date"].(time.Time); ok && !startDate.IsZero() {
+		query += ` AND date >= ?`
 		args = append(args, startDate)
 	}
 
-	if endDate,ok:=filters["end_date"].(time.Time);ok&&!endDate.IsZero(){
-		query +=`AND date <= ?`
-		args=append(args, endDate)
+	if endDate, ok := filters["end_date"].(time.Time); ok && !endDate.IsZero() {
+		query += ` AND date <= ?`
+		args = append(args, endDate)
 	}
 
-	query+=`ORDER BY date DESC, created_at DESC`
+	query += ` ORDER BY date DESC, created_at DESC`
 
-	rows,err:=d.conn.Conn().QueryContext(ctx,query,args...)
-	if err!=nil{
-		logger.Error("Failed to get transactions","user_id",userID,"error",err.Error())
-
-		return  nil,richerror.New(op).WithErr(err).WithMessage("Failed to get transactions").WithKind(richerror.KindUnexpected)
+	rows, err := d.conn.Conn().QueryContext(ctx, query, args...)
+	if err != nil {
+		logger.Error("Failed to get transactions", "user_id", userID, "error", err.Error())
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to get transactions").WithKind(richerror.KindUnexpected)
 	}
+
 	defer rows.Close()
 
 	var transactions []entity.Transaction
 
-	for rows.Next(){
-		tx,err:=scanTransaction(rows)
-		if err!=nil{
-			logger.Error("Failed to scan transaction","user_id",userID,"error",err.Error())
-			return nil,richerror.New(op).WithErr(err).WithMessage("failed to scan transaction").WithKind(richerror.KindUnexpected)
+	for rows.Next() {
+		tx, err := scanTransaction(rows)
+		if err != nil {
+			logger.Error("Failed to scan transaction", "user_id", userID, "error", err.Error())
+			return nil, richerror.New(op).WithErr(err).WithMessage("failed to scan transaction").WithKind(richerror.KindUnexpected)
 		}
-		transactions=append(transactions, tx)
+		transactions = append(transactions, tx)
 	}
 
 	if err = rows.Err(); err != nil {
-		logger.Error("Error iterating transactions","user_id",userID,"error",err.Error())
-		return  nil ,richerror.New(op).WithErr(err).WithMessage("failed to iterate transactions").WithKind(richerror.KindUnexpected)
+		logger.Error("Error iterating transactions", "user_id", userID, "error", err.Error())
+		return nil, richerror.New(op).WithErr(err).WithMessage("failed to iterate transactions").WithKind(richerror.KindUnexpected)
 	}
 
-	return  transactions,nil
-
+	return transactions, nil
 }
 
 func (d *DB) Update(ctx context.Context, tx entity.Transaction) (entity.Transaction, error) {
-	const op = richerror.Op("mysqltransaction.Update")
+	const op = richerror.Op("mysqlentity.Update")
 
 	logger.Info("Updating transaction in database", "transaction_id", tx.ID, "user_id", tx.UserID)
 
@@ -134,21 +143,21 @@ func (d *DB) Update(ctx context.Context, tx entity.Transaction) (entity.Transact
 	return tx, nil
 }
 
-func (d *DB) Delete(ctx context.Context,transactionID uint) error {
-	const op=richerror.Op("mysqltransaction.Delete")
-	
-	logger.Info("Deleting transaction from database","transaction_id",transactionID)
+func (d *DB) Delete(ctx context.Context, transactionID uint) error {
+	const op = richerror.Op("mysqlentity.Delete")
 
-	query:=`DELETE FROM transactions WHERE id= ?`
+	logger.Info("Deleting transaction from database", "transaction_id", transactionID)
 
-	res,err:=d.conn.Conn().ExecContext(ctx,query,transactionID)
+	query := `DELETE FROM transactions WHERE id = ?`
 
-	if err!=nil{
-		logger.Error("Failed to delete transaction","transaction_id",transactionID,"error",err.Error())
-		return richerror.New(op).WithErr(err).WithMessage("failed to delete transaction").WithKind(richerror.KindUnexpected) 
+	res, err := d.conn.Conn().ExecContext(ctx, query, transactionID)
+
+	if err != nil {
+		logger.Error("Failed to delete transaction", "transaction_id", transactionID, "error", err.Error())
+		return richerror.New(op).WithErr(err).WithMessage("failed to delete transaction").WithKind(richerror.KindUnexpected)
 	}
-	
-	rowsAffected,err:=res.RowsAffected()
+
+	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		logger.Error("Failed to get rows affected", "error", err.Error())
 		return richerror.New(op).WithErr(err).WithMessage("failed to verify deletion").WithKind(richerror.KindUnexpected)
@@ -163,11 +172,12 @@ func (d *DB) Delete(ctx context.Context,transactionID uint) error {
 	return nil
 }
 
-func scanTransaction(scanner mysql.Scanner)(entity.Transaction,error){
+func scanTransaction(scanner mysql.Scanner) (entity.Transaction, error) {
 	var tx entity.Transaction
 	var typeStr string
-	var date,createdAt,updatedAt []uint8
-	err:=scanner.Scan(
+	var date, createdAt, updatedAt []uint8
+
+	err := scanner.Scan(
 		&tx.ID,
 		&tx.UserID,
 		&tx.CategoryID,
@@ -179,23 +189,48 @@ func scanTransaction(scanner mysql.Scanner)(entity.Transaction,error){
 		&updatedAt,
 	)
 
-	if err!=nil{
-		return  entity.Transaction{},err
+	if err != nil {
+		return entity.Transaction{}, err
 	}
 
-	tx.Type=entity.MapToTransactionType(typeStr)
+	tx.Type = entity.MapToTransactionType(typeStr)
 
-	if len(date)>0 {
-		tx.Date,_=time.Parse("2006-01-02 15:04:05",string(date))
-	}
-	if len(createdAt)>0{
-		tx.CreatedAt,_=time.Parse("2006-01-02 15:04:05",string(createdAt))
-	}
-
-	if len(updatedAt)>0{
-		tx.UpdatedAt,_=time.Parse("2006-01-02 15:04:05",string(updatedAt))
+	// Parse dates - try multiple formats
+	dateFormats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02",
 	}
 
-	return tx,nil
+	if len(date) > 0 {
+		dateStr := string(date)
+		for _, format := range dateFormats {
+			if parsedDate, err := time.Parse(format, dateStr); err == nil {
+				tx.Date = parsedDate
+				break
+			}
+		}
+	}
 
+	if len(createdAt) > 0 {
+		createdAtStr := string(createdAt)
+		for _, format := range dateFormats {
+			if parsedDate, err := time.Parse(format, createdAtStr); err == nil {
+				tx.CreatedAt = parsedDate
+				break
+			}
+		}
+	}
+
+	if len(updatedAt) > 0 {
+		updatedAtStr := string(updatedAt)
+		for _, format := range dateFormats {
+			if parsedDate, err := time.Parse(format, updatedAtStr); err == nil {
+				tx.UpdatedAt = parsedDate
+				break
+			}
+		}
+	}
+
+	return tx, nil
 }
