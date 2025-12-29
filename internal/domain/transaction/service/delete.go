@@ -34,7 +34,6 @@ func (s Service) DeleteTransaction(ctx context.Context,transactionID,userID uint
 	logger.Info("Transaction deleted successfully","transaction_id",transactionID,"user_id",userID)
 
 
-
 	return param.DeleteTransactionResponse{
 		Message: "transaction deleted successfully",
 	},nil

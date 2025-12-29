@@ -5,6 +5,7 @@ import (
 
 	"github.com/ahhhmadtlz/expense-tracker/internal/config"
 	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/categoryhandler"
+	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/transactionhandler"
 	"github.com/ahhhmadtlz/expense-tracker/internal/delivery/httpserver/userhandler"
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/auth"
 	userservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/user/service"
@@ -12,6 +13,9 @@ import (
 
 	categoryservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/service"
 	categoryvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/validator"
+
+	transactionservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/service"
+	transactionvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/validator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -21,6 +25,7 @@ type Server struct {
 	config          config.Config
 	userHandler     userhandler.Handler
 	categoryHandler categoryhandler.Handler
+	transactionHandler transactionhandler.Handler
 	Router          *echo.Echo
 }
 
@@ -32,6 +37,8 @@ func New(
 	userValidator uservalidator.Validator,
 	categorySvc categoryservice.Service,
 	categoryValidator categoryvalidator.Validator,
+	transactionSvc transactionservice.Service,
+	transactionValidator transactionvalidator.Validator,
 )Server{
 	return  Server{
 		Router: echo.New(),
@@ -40,6 +47,7 @@ func New(
 			auth,userSvc,userValidator,config.Auth,
 		),
 		categoryHandler: categoryhandler.New(config.Auth,auth,categorySvc,categoryValidator),
+		transactionHandler: transactionhandler.New(config.Auth,auth,transactionSvc,transactionValidator),
 	}
 }
 
@@ -99,6 +107,7 @@ func (s Server)Serve(){
 
 	s.userHandler.SetRoutes(s.Router)
 	s.categoryHandler.SetRoutes(s.Router)
+	s.transactionHandler.SetRoutes(s.Router)
 
 
 		// Start server

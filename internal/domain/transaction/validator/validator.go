@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 
+	categoryentity "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/entity"
+
 	"github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/entity"
 )
 
@@ -12,7 +14,7 @@ type Repository interface {
 
 
 type CategoryRepository interface {
-	GetByID(ctx context.Context,categoryID uint)(any,error)
+	GetByID(ctx context.Context,categoryID uint)(categoryentity.Category,error)
 }
 
 type Validator struct {

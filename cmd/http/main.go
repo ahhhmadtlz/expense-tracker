@@ -15,13 +15,16 @@ import (
 	categoryrepository "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/repository"
 	categoryservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/service"
 	categoryvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/category/validator"
+	transactionrepository "github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/repository"
+	transactionservice "github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/service"
+	transactionvalidator "github.com/ahhhmadtlz/expense-tracker/internal/domain/transaction/validator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/observability/logger"
 	"github.com/ahhhmadtlz/expense-tracker/internal/repository/migrator"
 	"github.com/ahhhmadtlz/expense-tracker/internal/repository/mysql"
 )
 
 func main() {
-cfg := config.C()
+	cfg := config.C()
 
 	appLogger := logger.New(
 		cfg.Logger,
@@ -39,21 +42,20 @@ cfg := config.C()
 	mysqlDB := mysql.New(cfg.Mysql)
 	log.Println("✓ Database connected")
 
- if err := runMigrations(mysqlDB, cfg); err != nil {
+	if err := runMigrations(mysqlDB, cfg); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
 
 	appLogger.Info("Application starting", "port", cfg.HTTPServer.Port)
 
-	authSvc, userSvc, userValidator,categorySvc, categoryValidator := setupServices(cfg, mysqlDB)
+	authSvc, userSvc, userValidator, categorySvc, categoryValidator, transactionSvc, transactionValidator := setupServices(cfg, mysqlDB)
 
-	server := httpserver.New(cfg, authSvc, userSvc, userValidator ,categorySvc, categoryValidator)
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator, categorySvc, categoryValidator, transactionSvc, transactionValidator)
 
 	go func() {
 		appLogger.Info("Server starting", "port", cfg.HTTPServer.Port)
 		server.Serve()
 	}()
-
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
@@ -70,7 +72,6 @@ cfg := config.C()
 
 	appLogger.Info("Application stopped")
 }
-
 
 func runMigrations(mysqlDB *mysql.MySQLDB, cfg config.Config) error {
 	mgr := migrator.New(mysqlDB, migrator.Config{
@@ -91,18 +92,23 @@ func setupServices(
 	uservalidator.Validator,
 	categoryservice.Service,
 	categoryvalidator.Validator,
+	transactionservice.Service,
+	transactionvalidator.Validator,
 ) {
 	// Auth service
 	authSvc := auth.New(cfg.Auth)
 
 	userRepo := userrepository.New(mysqlDB)
 	userValidator := uservalidator.New(userRepo)
-	userSvc := userservice.New(authSvc, userRepo) 
+	userSvc := userservice.New(authSvc, userRepo)
 
-	categoryRepo:=categoryrepository.New(mysqlDB)
+	categoryRepo := categoryrepository.New(mysqlDB)
 	categoryValidator := categoryvalidator.New(categoryRepo)
 	categorySvc := categoryservice.New(categoryRepo)
 
+	transactionRepo := transactionrepository.New(mysqlDB)
+	transactionValidator := transactionvalidator.New(transactionRepo, categoryRepo)
+	transactionSvc := transactionservice.New(transactionRepo)
 
-	return authSvc, userSvc, userValidator, categorySvc, categoryValidator
+	return authSvc, userSvc, userValidator, categorySvc, categoryValidator, transactionSvc, transactionValidator
 }
